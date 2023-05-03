@@ -128,3 +128,8 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# dotenv environment variable files and CDK folders
+cdk.out/
+cdk.context.json
+.env
