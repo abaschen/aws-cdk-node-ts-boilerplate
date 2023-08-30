@@ -24,6 +24,9 @@
   },
   "homepage": "https://github.com/TecHunter/aws-cdk-node-ts-boilerplate#readme",
   "dependencies": {
+    "@aws-lambda-powertools/logger": "^1.12.1",
+    "@aws-lambda-powertools/metrics": "^1.12.1",
+    "@aws-lambda-powertools/tracer": "^1.12.1",
     "aws-cdk-lib": "^2.70.0",
     "constructs": "^10.1.285",
     "discord-api-types": "^0.37.41",
