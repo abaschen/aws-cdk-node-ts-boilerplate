@@ -5,7 +5,7 @@ import { IManagedPolicy, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { LayerVersion } from 'aws-cdk-lib/aws-lambda';
 import { Construct, IConstruct } from 'constructs';
 import { readdirSync } from 'fs';
-import { NodetsFunction } from './NodetsFunction';
+import { NodetsFunction, NodetsFunctionProps } from './NodetsFunction';
 import { NodetsLayer } from './NodetsLayer';
 
 interface ExampleStackProps extends StackProps {
@@ -55,22 +55,20 @@ export class ExampleStack extends Stack {
     /**
      * Example of lambda creation
      */
-    const lambdaDefault = {
+    const lambdaDefault: Partial<NodetsFunctionProps> = {
       //      vpc,
       //      vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
       //      securityGroups: [lambdaSecurityGroup],
     };
 
-    new NodetsFunction(this, 'discord-pong-lambda', {
+    new NodetsFunction(this, 'discord-pong', {
       ...lambdaDefault,
       description: 'A lambda example with a layer to answer to discord bot interaction with pong',
-      name: 'discord-pong',
       layers: [this.layers['discord-authorizer']]
     });
 
-    new NodetsFunction(this, 'simple-lambda-without-layer', {
+    new NodetsFunction(this, 'return-200', {
       ...lambdaDefault,
-      name: 'return-200',
       description: 'always return 200',
     });
 

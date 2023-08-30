@@ -1,10 +1,7 @@
-import { RemovalPolicy } from "aws-cdk-lib";
-import { Architecture, Code, LayerVersion, LayerVersionProps, Runtime } from "aws-cdk-lib/aws-lambda";
+import { Architecture, Code, LayerVersion, Runtime } from "aws-cdk-lib/aws-lambda";
 import { Construct } from "constructs";
 import esbuild from 'esbuild';
-import { fstat, writeFileSync } from "node:fs";
-import { mainModule } from "node:process";
-
+import { writeFileSync } from "node:fs";
 
 
 export interface NodetsLayerProps {
