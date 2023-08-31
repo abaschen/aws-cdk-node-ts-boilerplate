@@ -1,7 +1,8 @@
-import { CfnResource, IAspect, NestedStack, RemovalPolicy, Resource, Stack, TagManager } from "aws-cdk-lib";
+import { CfnResource, IAspect, RemovalPolicy, Resource, TagManager } from "aws-cdk-lib";
 import { IConstruct } from "constructs";
 
 interface ResourceAspectProps {
+    removalPolicy: RemovalPolicy
     // add whatever tag to every resource 
     [name: string]: string
 }
@@ -9,19 +10,19 @@ interface ResourceAspectProps {
 export class ResourceAspect implements IAspect {
     readonly tags: { [key: string]: string; }
     readonly iter: string[]
+    readonly removalPolicy: RemovalPolicy
 
-    constructor(props: ResourceAspectProps) {
+    constructor({ removalPolicy, ...props }: ResourceAspectProps) {
         this.tags = { ...props };
         this.iter = Object.keys(this.tags);
+        this.removalPolicy = removalPolicy;
     }
-
-
 
     visit(node: IConstruct) {
         if (CfnResource.isCfnResource(node) || (node instanceof Resource && node.node.defaultChild)) {
             try {
                 // apply destroy to everything
-                node.applyRemovalPolicy(RemovalPolicy.DESTROY);
+                node.applyRemovalPolicy(this.removalPolicy);
             } catch (error) {
                 console.warn('cannot apply RemovalPolicy to ' + node.constructor.name + '/' + node.node.id);
             }

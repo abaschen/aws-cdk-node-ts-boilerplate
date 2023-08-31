@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { App, Aspects } from "aws-cdk-lib";
+import { App, Aspects, RemovalPolicy } from "aws-cdk-lib";
 import { ExampleStack } from "../stack/ExampleStack";
 import dotenv from 'dotenv';
 import { ResourceAspect } from "./ResourceAspect";
@@ -14,5 +14,6 @@ const base = new ExampleStack(app, 'example-cdk-stack', {
 
 
 Aspects.of(app).add(new ResourceAspect({
+  removalPolicy: RemovalPolicy.DESTROY,
   app: appName
 }));
