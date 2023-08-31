@@ -7,6 +7,7 @@ import { Construct } from 'constructs';
 import { readdirSync } from 'fs';
 import { NodetsFunction, NodetsFunctionProps } from './NodetsFunction';
 import { NodetsLayer } from './NodetsLayer';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 interface ExampleStackProps extends StackProps {
   readonly app: string
@@ -34,11 +35,16 @@ export class ExampleStack extends Stack {
       //      vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
       //      securityGroups: [lambdaSecurityGroup],
     };
-
-    new NodetsFunction(this, 'discord-pong', {
+    const name = 'discord-pong';
+    
+    new NodetsFunction(this, name, {
       ...lambdaDefault,
       description: 'A lambda example with a layer to answer to discord bot interaction with pong',
-      layers: [this.layers['discord-authorizer']]
+      layers: [this.layers['discord-authorizer']],
+      parameters: ['DB-USER'],
+      environment: {
+        TEST_1: 'test Value 1'
+      }
     });
 
     new NodetsFunction(this, 'return-200', {

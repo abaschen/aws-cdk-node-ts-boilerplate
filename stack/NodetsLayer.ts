@@ -24,7 +24,7 @@ export class NodetsLayer extends LayerVersion {
             mainFields: ['module', 'main'],
             target: 'node18',
             platform: 'node',
-            external: ['@aws-sdk/*', 'aws-lambda', '@layer/*'],
+            external: ['@aws-sdk/*', 'aws-lambda', '@layer/*', '@aws-lambda-powertools/*', 'aws-xray-sdk-core'],
             format: 'esm',
         });
         // write package.json to file

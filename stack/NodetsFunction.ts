@@ -3,9 +3,11 @@ import { Effect, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws
 import { Architecture, ILayerVersion, LayerVersion, Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction, NodejsFunctionProps, OutputFormat } from "aws-cdk-lib/aws-lambda-nodejs";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import { IStringParameter, StringParameter } from "aws-cdk-lib/aws-ssm";
 import { Construct } from "constructs";
 export interface NodetsFunctionProps extends NodejsFunctionProps {
     policies?: PolicyStatement[]
+    parameters?: string[]
 }
 export const commonProps: Partial<NodejsFunctionProps> = {
     architecture: Architecture.ARM_64,
@@ -24,16 +26,18 @@ export const commonProps: Partial<NodejsFunctionProps> = {
         banner: 'import { createRequire } from \'module\'; const require = createRequire(import.meta.url);',
         mainFields: ['module', 'main'],
         target: 'node18',
-        externalModules: ['@aws-sdk/*', 'aws-lambda', '@layer/*', '@aws-lambda-powertools/*', './common/*', 'aws-xray-sdk-core'],
+        externalModules: ['@aws-sdk/*', 'aws-lambda', '@layer/*', '@aws-lambda-powertools/*', 'aws-xray-sdk-core'],
         format: OutputFormat.ESM
     },
     layers: [],
 };
 let powertools: ILayerVersion | undefined = undefined;
 
+
 export class NodetsFunction extends Construct {
     declare role: Role
     declare lambda: NodejsFunction
+    declare parameters: { [name: string]: IStringParameter }
 
     constructor(scope: Stack, id: string, { policies, ...props }: NodetsFunctionProps) {
         super(scope, id);
@@ -50,6 +54,8 @@ export class NodetsFunction extends Construct {
             const r = this.role;
             policies.forEach(e => r.addToPolicy(e));
         }
+        this.parameters = {};
+        props.parameters?.forEach(nameParam => this.parameters[nameParam] = StringParameter.fromStringParameterName(this, `fn-param-${nameParam}`, `fn-${nameParam}`))
         if (props.vpc) {
             this.role.addToPolicy(new PolicyStatement({
                 effect: Effect.ALLOW,
@@ -101,6 +107,12 @@ export class NodetsFunction extends Construct {
                 }
             ))
 
+        const paramEnvs: { [name: string]: string } = {}
+        Object.keys(this.parameters).forEach(paramName => {
+            paramEnvs[`PARAM_${paramName.toUpperCase().replaceAll('-', '_')}`] = this.parameters[paramName].stringValue
+        })
+
+
         this.lambda = new NodejsFunction(scope, `fn-${id}`, {
             //default values
             ...commonProps,
@@ -119,6 +131,7 @@ export class NodetsFunction extends Construct {
             },
             environment: {
                 ...commonProps.environment,
+                ...paramEnvs,
                 ...props.environment
             },
 
