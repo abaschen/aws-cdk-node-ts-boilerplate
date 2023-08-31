@@ -5,9 +5,12 @@ import { NodejsFunction, NodejsFunctionProps, OutputFormat } from "aws-cdk-lib/a
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { IStringParameter, StringParameter } from "aws-cdk-lib/aws-ssm";
 import { Construct } from "constructs";
+
+const PARAM_PREFIX = 'fn-';
 export interface NodetsFunctionProps extends NodejsFunctionProps {
     policies?: PolicyStatement[]
     parameters?: string[]
+    powertools?: boolean
 }
 export const commonProps: Partial<NodejsFunctionProps> = {
     architecture: Architecture.ARM_64,
@@ -39,9 +42,9 @@ export class NodetsFunction extends Construct {
     declare lambda: NodejsFunction
     declare parameters: { [name: string]: IStringParameter }
 
-    constructor(scope: Stack, id: string, { policies, ...props }: NodetsFunctionProps) {
+    constructor(scope: Stack, id: string, { policies, powertools: enablePowerTools, ...props }: NodetsFunctionProps) {
         super(scope, id);
-        if (!powertools) {
+        if (enablePowerTools !== false && !powertools) {
             powertools = LayerVersion.fromLayerVersionArn(scope, 'powertool-layer', `arn:aws:lambda:${scope.region}:094274105915:layer:AWSLambdaPowertoolsTypeScript:18`);
             commonProps.layers?.push(powertools);
         }
@@ -55,34 +58,35 @@ export class NodetsFunction extends Construct {
             policies.forEach(e => r.addToPolicy(e));
         }
         this.parameters = {};
-        props.parameters?.forEach(nameParam => this.parameters[nameParam] = StringParameter.fromStringParameterName(this, `fn-param-${nameParam}`, `fn-${nameParam}`))
-        if (props.vpc) {
-            this.role.addToPolicy(new PolicyStatement({
+        props.parameters?.forEach(nameParam => {
+            const p = StringParameter.fromStringParameterName(this, `fn-param-${id}-${nameParam}`, `${PARAM_PREFIX}${nameParam}`);
+            p.grantRead(this.role);
+            this.parameters[nameParam] = p;
+
+        });
+        this.role.addToPolicy(new PolicyStatement(
+            {
                 effect: Effect.ALLOW,
                 actions: [
                     "logs:CreateLogGroup",
                     "logs:CreateLogStream",
                     "logs:PutLogEvents",
+                ],
+                resources: [`arn:aws:logs:${Stack.of(this).region}:${scope.account}:log-group:/aws/lambda/${id}:*`]
+            }
+        ));
+        if (props.vpc) {
+            this.role.addToPolicy(new PolicyStatement({
+                effect: Effect.ALLOW,
+                actions: [
                     "ec2:CreateNetworkInterface",
                     "ec2:DescribeNetworkInterfaces",
                     "ec2:DeleteNetworkInterface",
                     "ec2:AssignPrivateIpAddresses",
                     "ec2:UnassignPrivateIpAddresses"
                 ],
-                resources: ["*"]
+                resources: ["*"] // todo be restrictive on VPC access
             }));
-        } else {
-            this.role.addToPolicy(new PolicyStatement(
-                {
-                    effect: Effect.ALLOW,
-                    actions: [
-                        "logs:CreateLogGroup",
-                        "logs:CreateLogStream",
-                        "logs:PutLogEvents",
-                    ],
-                    resources: ["*"]
-                }
-            ));
         }
         //default tracing is active
         if (!props.tracing || props.tracing === Tracing.ACTIVE)
