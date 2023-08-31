@@ -1,12 +1,18 @@
 #!/usr/bin/env node
-import { App } from "aws-cdk-lib";
+import { App, Aspects } from "aws-cdk-lib";
 import { ExampleStack } from "../stack/ExampleStack";
 import dotenv from 'dotenv';
+import { ResourceAspect } from "./ResourceAspect";
 
 dotenv.config();
 
 const app = new App();
-
+const appName = 'SampleApp';
 const base = new ExampleStack(app, 'example-cdk-stack', {
-  app: 'SampleApp'
+  app: appName
 });
+
+
+Aspects.of(app).add(new ResourceAspect({
+  app: appName
+}));

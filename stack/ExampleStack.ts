@@ -1,9 +1,9 @@
 // Import main CDK library as cdk
-import { Aspects, CfnResource, RemovalPolicy, Resource, Stack, StackProps, TagManager } from 'aws-cdk-lib';
+import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 
 import { IManagedPolicy, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { LayerVersion } from 'aws-cdk-lib/aws-lambda';
-import { Construct, IConstruct } from 'constructs';
+import { Construct } from 'constructs';
 import { readdirSync } from 'fs';
 import { NodetsFunction, NodetsFunctionProps } from './NodetsFunction';
 import { NodetsLayer } from './NodetsLayer';
@@ -25,32 +25,6 @@ export class ExampleStack extends Stack {
     this.lambdaManagedPolicy = ManagedPolicy.fromManagedPolicyArn(this, 'AWSLambdaVPCAccessExecutionRole', 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole');
     //build layers
     this.buildLayers();
-
-    // Add an aspect to add some metadata tags
-    Aspects.of(this).add({
-      visit(node: IConstruct) {
-
-        // Add a tag based on the resource type, helpful in cost explorer
-        // Add a tag for the app
-        if (node instanceof Resource) {
-          if (TagManager.isTaggable(node)) {
-            node.tags.setTag('app', props.app);
-            node.tags.setTag('resource:type', node.constructor.name);
-          }
-        }
-
-        // Apply default RemovalPolicy
-        if (props.defaultRemovalPolicy) {
-          if (node instanceof CfnResource || (node instanceof Resource && node.node.defaultChild)) {
-            try {
-              node.applyRemovalPolicy(props.defaultRemovalPolicy);
-            } catch (error) {
-              console.warn('cannot apply RemovalPolicy to ' + node.constructor.name + '/' + node.node.id);
-            }
-          }
-        }
-      }
-    });
 
     /**
      * Example of lambda creation
