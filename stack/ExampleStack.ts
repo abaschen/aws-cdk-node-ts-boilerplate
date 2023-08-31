@@ -7,7 +7,6 @@ import { Construct } from 'constructs';
 import { readdirSync } from 'fs';
 import { NodetsFunction, NodetsFunctionProps } from './NodetsFunction';
 import { NodetsLayer } from './NodetsLayer';
-import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 interface ExampleStackProps extends StackProps {
   readonly app: string
@@ -36,7 +35,6 @@ export class ExampleStack extends Stack {
       //      securityGroups: [lambdaSecurityGroup],
     };
     const name = 'discord-pong';
-    
     new NodetsFunction(this, name, {
       ...lambdaDefault,
       description: 'A lambda example with a layer to answer to discord bot interaction with pong',
