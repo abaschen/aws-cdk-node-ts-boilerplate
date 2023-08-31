@@ -1,4 +1,4 @@
-import { CfnResource, IAspect, RemovalPolicy, Resource, TagManager } from "aws-cdk-lib";
+import { CfnResource, IAspect, NestedStack, RemovalPolicy, Resource, Stack, TagManager } from "aws-cdk-lib";
 import { IConstruct } from "constructs";
 
 interface ResourceAspectProps {
@@ -18,14 +18,7 @@ export class ResourceAspect implements IAspect {
 
 
     visit(node: IConstruct) {
-        if (node instanceof Resource) {
-            if (TagManager.isTaggable(node)) {
-                // add resource:type tag to help finding resources in cost explorer and groups
-                node.tags.setTag('resource:type', node.constructor.name);
-            }
-
-        }
-        if (node instanceof CfnResource || (node instanceof Resource && node.node.defaultChild)) {
+        if (CfnResource.isCfnResource(node) || (node instanceof Resource && node.node.defaultChild)) {
             try {
                 // apply destroy to everything
                 node.applyRemovalPolicy(RemovalPolicy.DESTROY);
@@ -34,7 +27,8 @@ export class ResourceAspect implements IAspect {
             }
         }
 
-        if (TagManager.isTaggable(node)) {
+        if (TagManager.isTaggable(node) && CfnResource.isCfnResource(node)) {
+            node.tags.setTag('resource:type', node.cfnResourceType);
             this.iter.forEach(k => node.tags.setTag(`x-${k}`, this.tags[k]))
         }
 

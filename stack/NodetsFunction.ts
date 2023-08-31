@@ -1,4 +1,4 @@
-import { Duration, Stack } from "aws-cdk-lib";
+import { Duration, Resource, Stack, Tags } from "aws-cdk-lib";
 import { Effect, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Architecture, ILayerVersion, LayerVersion, Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction, NodejsFunctionProps, OutputFormat } from "aws-cdk-lib/aws-lambda-nodejs";
