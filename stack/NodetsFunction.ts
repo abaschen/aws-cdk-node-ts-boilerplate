@@ -1,8 +1,8 @@
-import { Duration, Stack } from "aws-cdk-lib";
-import { Effect, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
+import { Effect, IRole, ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Architecture, ILayerVersion, LayerVersion, Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction, NodejsFunctionProps, OutputFormat } from "aws-cdk-lib/aws-lambda-nodejs";
-import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { IStringParameter, StringParameter } from "aws-cdk-lib/aws-ssm";
 import { Construct } from "constructs";
 
@@ -20,7 +20,6 @@ export const commonProps: Partial<NodejsFunctionProps> = {
     handler: 'index.handler',
     timeout: Duration.seconds(30),
     retryAttempts: 0,
-    logRetention: RetentionDays.ONE_DAY,
     environment: {
         NODE_OPTIONS: '--enable-source-maps'
     },
@@ -39,8 +38,11 @@ let powertools: ILayerVersion | undefined = undefined;
 
 export class NodetsFunction extends Construct {
     declare role: Role
+    declare logRetentionRole: IRole
+
     declare lambda: NodejsFunction
     declare parameters: { [name: string]: IStringParameter }
+    declare logGroup: LogGroup
 
     constructor(scope: Stack, id: string, { policies, powertools: enablePowerTools, ...props }: NodetsFunctionProps) {
         super(scope, id);
@@ -48,10 +50,18 @@ export class NodetsFunction extends Construct {
             powertools = LayerVersion.fromLayerVersionArn(scope, 'powertool-layer', `arn:aws:lambda:${scope.region}:094274105915:layer:AWSLambdaPowertoolsTypeScript:18`);
             commonProps.layers?.push(powertools);
         }
+
+        // create a log group to prevent log retention role creation
+        this.logGroup = new LogGroup(this, `fn-log-${id}`, {
+            logGroupName: `/aws/lambda/${id}`,
+            removalPolicy: RemovalPolicy.DESTROY,
+            retention: RetentionDays.ONE_DAY
+        });
+
         this.role = new Role(scope, `fn-role-${id}`, {
             roleName: `fnRole${id}`,
             assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-            description: `lambda exec role for ${id}`
+            description: `lambda exec role for ${id}`,
         });
         if (policies) {
             const r = this.role;
@@ -64,19 +74,19 @@ export class NodetsFunction extends Construct {
             this.parameters[nameParam] = p;
 
         });
-        this.role.addToPolicy(new PolicyStatement(
+        this.role.addToPrincipalPolicy(new PolicyStatement(
             {
                 effect: Effect.ALLOW,
                 actions: [
-                    "logs:CreateLogGroup",
                     "logs:CreateLogStream",
                     "logs:PutLogEvents",
                 ],
-                resources: [`arn:aws:logs:${Stack.of(this).region}:${scope.account}:log-group:/aws/lambda/${id}:*`]
+                resources: [`${this.logGroup.logGroupArn}:*`],
             }
         ));
+
         if (props.vpc) {
-            this.role.addToPolicy(new PolicyStatement({
+            this.role.addToPrincipalPolicy(new PolicyStatement({
                 effect: Effect.ALLOW,
                 actions: [
                     "ec2:CreateNetworkInterface",
@@ -90,7 +100,7 @@ export class NodetsFunction extends Construct {
         }
         //default tracing is active
         if (!props.tracing || props.tracing === Tracing.ACTIVE)
-            this.role.addToPolicy(new PolicyStatement(
+            this.role.addToPrincipalPolicy(new PolicyStatement(
                 {
                     effect: Effect.ALLOW,
                     actions: [
@@ -107,7 +117,7 @@ export class NodetsFunction extends Construct {
                         "xray:PutTelemetryRecords",
                         "xray:PutTraceSegments"
                     ],
-                    resources: [`arn:aws:logs:${Stack.of(this).region}:${scope.account}:log-group:/aws/lambda/${id}:*`],
+                    resources: [`${this.logGroup.logGroupArn}:*`],
                 }
             ))
 
@@ -128,6 +138,8 @@ export class NodetsFunction extends Construct {
             // force a role, do not let the cdk generate one, important to avoid issues when using grant*
             role: this.role,
             layers: props.layers ? [...commonProps.layers ?? [], ...props.layers] : commonProps.layers,
+            //force the flag to not add the default permissive policy
+            tracing: Tracing.DISABLED,
             // override props
             bundling: {
                 ...commonProps.bundling,
@@ -138,8 +150,8 @@ export class NodetsFunction extends Construct {
                 ...paramEnvs,
                 ...props.environment
             },
-
         });
+
     }
 
 }
