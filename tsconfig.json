@@ -38,17 +38,17 @@
     "paths": {
       "@layer/*": [
         "src/layers/*"
-      ],
-    },
+      ]
+    }
   },
   "aliases": {
     "@layer/*": [
       "src/layers/*"
-    ],
+    ]
   },
   "exclude": [
     "node_modules",
     "dist",
-    "cdk.out",
+    "cdk.out"
   ]
 }
